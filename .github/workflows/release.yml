@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_as:
+        description: '版本升级类型'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      first_release:
+        description: '是否首次发布（使用 --first-release）'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      dry_run:
+        description: '是否仅预演（不推送）'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Project
+        run: npm run lint && npm test && npm run build
+
+      - name: Release Preflight
+        run: |
+          REQUIRE_REMOTE=0 make release-preflight
+
+      - name: Configure Git Identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Release (Dry Run)
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          EXTRA=""
+          if [ "${{ github.event.inputs.first_release }}" = "true" ]; then
+            EXTRA="--first-release"
+          fi
+          npm run release:dry-run -- --release-as ${{ github.event.inputs.release_as }} $EXTRA
+
+      - name: Release (Create Tag + Changelog)
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          EXTRA=""
+          if [ "${{ github.event.inputs.first_release }}" = "true" ]; then
+            EXTRA="--first-release"
+          fi
+          npm run release -- --release-as ${{ github.event.inputs.release_as }} $EXTRA
+
+      - name: Push Changes
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: git push --follow-tags
+
+      - name: Resolve Latest Tag
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: latest_tag
+        run: |
+          TAG="$(git describe --tags --abbrev=0)"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.latest_tag.outputs.tag }}
+          generate_release_notes: true
