@@ -1,4 +1,6 @@
 import Fastify from 'fastify';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { z } from 'zod';
 import { AppError } from './errors';
 import { BillingService } from './services/billingService';
@@ -57,6 +59,26 @@ export function buildServer(options: BuildServerOptions = {}) {
   app.addHook('onClose', async () => {
     await store.close();
   });
+
+  const webAssets = {
+    '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
+    '/app.css': { file: 'app.css', type: 'text/css; charset=utf-8' },
+    '/app.js': { file: 'app.js', type: 'application/javascript; charset=utf-8' }
+  } as const;
+
+  const webRoot = path.resolve(__dirname, '..', 'web');
+  const readWebAsset = async (file: string) => readFile(path.join(webRoot, file));
+
+  for (const [route, asset] of Object.entries(webAssets)) {
+    app.get(route, async (_request, reply) => {
+      try {
+        const content = await readWebAsset(asset.file);
+        return reply.type(asset.type).send(content);
+      } catch {
+        throw new AppError(404, 40401, '页面不存在');
+      }
+    });
+  }
 
   const requireUser = async (request: {
     headers: Record<string, string | string[] | undefined>;

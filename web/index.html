@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>三色日记</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <div class="bg-layer bg-layer-a" aria-hidden="true"></div>
+    <div class="bg-layer bg-layer-b" aria-hidden="true"></div>
+
+    <header class="app-header reveal">
+      <div>
+        <p class="eyebrow">TRI JOURNAL</p>
+        <h1>三色日记</h1>
+        <p class="subtitle">想法 · 情绪 · 身体</p>
+      </div>
+      <div class="header-actions">
+        <div class="header-status" id="headerStatus">未登录</div>
+        <button id="logoutBtn" class="btn btn-ghost hidden">退出登录</button>
+      </div>
+    </header>
+
+    <main class="app-shell reveal">
+      <nav class="tab-bar">
+        <button class="tab active" data-view="login">登录</button>
+        <button class="tab" data-view="write">写作</button>
+        <button class="tab" data-view="garden">花园</button>
+        <button class="tab" data-view="weekly">周报</button>
+        <button class="tab" data-view="settings">设置</button>
+      </nav>
+
+      <section class="view active" id="view-login">
+        <div class="card">
+          <h2>登录与安全</h2>
+          <p class="hint">支持短信与密码登录；风险命中时自动触发图形验证码。</p>
+          <p class="hint" id="authFeedback"></p>
+
+          <div class="auth-switch">
+            <button class="auth-mode active" data-auth-mode="sms">短信登录</button>
+            <button class="auth-mode" data-auth-mode="password">密码登录</button>
+          </div>
+
+          <div id="captchaPanel" class="captcha-panel hidden">
+            <p class="hint">为了安全，请先完成图形验证码。</p>
+            <div class="captcha-prompt" id="captchaPrompt"></div>
+            <div class="inline-grid">
+              <input id="captchaAnswerInput" placeholder="请输入结果" />
+              <button id="captchaVerifyBtn" class="btn">验证并发送</button>
+            </div>
+          </div>
+
+          <div class="auth-panel" id="authSmsPanel">
+            <label>手机号</label>
+            <input id="phoneInput" placeholder="例如 13800000000" />
+
+            <div class="inline-grid">
+              <button id="sendCodeBtn" class="btn btn-primary">发送验证码</button>
+              <input id="codeInput" placeholder="6 位验证码" maxlength="6" />
+            </div>
+            <p id="sendCodeMeta" class="hint small"></p>
+            <button id="verifyCodeBtn" class="btn btn-accent">验证码登录</button>
+            <p id="debugCode" class="debug"></p>
+
+            <div class="divider"></div>
+            <label>设置密码（登录后可用）</label>
+            <div class="inline-grid">
+              <input id="passwordInput" type="password" placeholder="6-20 位" />
+              <button id="setPasswordBtn" class="btn">设置密码</button>
+            </div>
+          </div>
+
+          <div class="auth-panel hidden" id="authPasswordPanel">
+            <label>手机号</label>
+            <input id="passwordPhoneInput" placeholder="例如 13800000000" />
+            <label>密码</label>
+            <input id="passwordLoginInput" type="password" placeholder="输入已设置的密码" />
+            <button id="passwordLoginBtn" class="btn btn-accent">密码登录</button>
+
+            <div class="divider"></div>
+            <h3>忘记密码</h3>
+            <p class="hint">先获取短信验证码，再设置新密码。</p>
+            <label>手机号</label>
+            <input id="resetPhoneInput" placeholder="例如 13800000000" />
+            <div class="inline-grid">
+              <button id="sendResetCodeBtn" class="btn btn-primary">发送重置验证码</button>
+              <input id="resetCodeInput" placeholder="6 位验证码" maxlength="6" />
+            </div>
+            <input id="resetPasswordInput" type="password" placeholder="新密码 6-20 位" />
+            <button id="resetPasswordBtn" class="btn">重置密码</button>
+            <p id="resetDebugCode" class="debug"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-write">
+        <div class="card">
+          <div class="mode-switch">
+            <button class="mode active" data-mode="free">自由书写</button>
+            <button class="mode" data-mode="guided">引导书写</button>
+          </div>
+
+          <div id="guidedBox" class="guided-box hidden">
+            <label>想法</label>
+            <textarea id="guidedThought" placeholder="今天反复出现的一个念头是..."></textarea>
+            <label>情绪</label>
+            <textarea id="guidedEmotion" placeholder="此刻你的情绪名字是..."></textarea>
+            <label>身体</label>
+            <textarea id="guidedBody" placeholder="从头到脚扫描，你注意到..."></textarea>
+            <button id="composeGuidedBtn" class="btn">将引导内容合并到正文</button>
+          </div>
+
+          <label>正文</label>
+          <textarea
+            id="journalInput"
+            class="journal-text"
+            placeholder="写下今天此刻的体验..."
+          ></textarea>
+
+          <div class="inline-grid three">
+            <select id="sourceSelect">
+              <option value="text">文字输入</option>
+              <option value="voice">语音转写</option>
+            </select>
+            <button id="voiceBtn" class="btn">开始语音</button>
+            <button id="submitJournalBtn" class="btn btn-primary">提交并分析</button>
+          </div>
+
+          <div id="spanLegend" class="legend">
+            <span class="pill thought">想法</span>
+            <span class="pill emotion">情绪</span>
+            <span class="pill body">身体</span>
+          </div>
+
+          <div id="analysisResult" class="analysis-result"></div>
+          <div class="inline-grid">
+            <button id="saveSpanBtn" class="btn btn-accent" disabled>保存当前分类</button>
+            <button id="refreshReflectionBtn" class="btn" disabled>刷新反思卡</button>
+          </div>
+          <div id="reflectionCard" class="reflection-card"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-garden">
+        <div class="card">
+          <h2>内在花园</h2>
+          <div class="inline-grid">
+            <input id="monthInput" type="month" />
+            <button id="loadGardenBtn" class="btn btn-primary">查看花园</button>
+          </div>
+          <div id="gardenGrid" class="garden-grid"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-weekly">
+        <div class="card">
+          <h2>周回顾</h2>
+          <div class="inline-grid">
+            <input id="weekInput" type="date" />
+            <button id="loadWeeklyBtn" class="btn btn-primary">生成周报</button>
+          </div>
+          <div id="weeklyPanel" class="weekly-panel"></div>
+        </div>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="card">
+          <h2>设置与权益</h2>
+          <label>睡前提醒时间</label>
+          <div class="inline-grid">
+            <input id="reminderTimeInput" type="time" value="22:00" />
+            <label class="checkbox">
+              <input id="reminderEnabledInput" type="checkbox" checked />
+              启用提醒
+            </label>
+          </div>
+          <div class="inline-grid">
+            <button id="loadReminderBtn" class="btn">读取提醒设置</button>
+            <button id="saveReminderBtn" class="btn btn-primary">保存提醒设置</button>
+          </div>
+
+          <div class="divider"></div>
+          <h3>订阅权益（示例）</h3>
+          <div class="inline-grid">
+            <button id="loadEntitlementBtn" class="btn">读取权益</button>
+            <button id="upgradeBtn" class="btn btn-accent">模拟升级订阅</button>
+          </div>
+          <pre id="entitlementBox" class="mono"></pre>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+    <div id="labelChooser" class="chooser hidden" role="dialog" aria-label="选择标签"></div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

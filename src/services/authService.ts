@@ -382,7 +382,11 @@ export class AuthService {
       return;
     }
     if (record.lockedUntil > current) {
-      throw new AppError(423, 42311, '密码输入错误次数过多，请稍后再试');
+      const retryAfterSec = Math.ceil((record.lockedUntil - current) / 1000);
+      throw new AppError(423, 42311, '密码输入错误次数过多，请稍后再试', {
+        retry_after_sec: retryAfterSec,
+        locked_until: toIso(record.lockedUntil)
+      });
     }
     await this.store.deletePasswordFailure(phone);
   }

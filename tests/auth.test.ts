@@ -122,5 +122,7 @@ describe('auth and risk controls', () => {
       .send({ phone, password: 'safe@123' });
     expect(locked.status).toBe(423);
     expect(locked.body.code).toBe(42311);
+    expect(locked.body.details.retry_after_sec).toBeGreaterThan(0);
+    expect(typeof locked.body.details.locked_until).toBe('string');
   });
 });
