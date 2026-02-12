@@ -231,6 +231,7 @@ npm run format:check
 
 - `GET /healthz`
 - `GET /readyz`
+- `GET /metrics`（Prometheus 文本格式）
 
 ### 认证
 
@@ -275,13 +276,21 @@ npm run format:check
 
 1. Liveness：`GET /healthz`（用于进程存活检查）
 2. Readiness：`GET /readyz`（用于依赖就绪检查，当前会检查存储可用性）
+3. Metrics：`GET /metrics`（用于 Prometheus 抓取请求量与时延累计指标）
 
 示例命令：
 
 ```bash
 curl -sS http://127.0.0.1:3000/healthz
 curl -sS http://127.0.0.1:3000/readyz
+curl -sS http://127.0.0.1:3000/metrics
 ```
+
+最小告警建议（示例）：
+
+1. `readyz` 非 200 持续 3 分钟告警。
+2. `tri_http_requests_total` 5xx 比例在 5 分钟窗口内 > 2% 告警。
+3. `tri_http_request_duration_ms_sum / tri_http_request_duration_ms_count` 计算均值，若核心路由时延持续高于基线告警。
 
 ## 验收 PostgreSQL 持久化
 

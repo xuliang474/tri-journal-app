@@ -51,6 +51,57 @@ export function buildServer(options: BuildServerOptions = {}) {
   const journalService = new JournalService(store, aiService);
   const insightService = new InsightService(store);
   const billingService = new BillingService(store);
+  const startedAtSec = Math.floor(Date.now() / 1000);
+
+  const requestTotalSeries = new Map<string, { labels: Record<string, string>; value: number }>();
+  const requestDurationSeries = new Map<
+    string,
+    { labels: Record<string, string>; count: number; sumMs: number }
+  >();
+
+  const labelsKey = (labels: Record<string, string>) => JSON.stringify(labels);
+  const metricRoute = (request: { routeOptions?: { url?: string }; url?: string }) => {
+    const raw = request.routeOptions?.url ?? request.url ?? 'unknown';
+    return raw.split('?')[0] || 'unknown';
+  };
+  const escapeLabelValue = (value: string) =>
+    value.replaceAll('\\', '\\\\').replaceAll('\n', '\\n').replaceAll('"', '\\"');
+  const labelsToText = (labels: Record<string, string>) =>
+    `{${Object.entries(labels)
+      .map(([key, value]) => `${key}="${escapeLabelValue(value)}"`)
+      .join(',')}}`;
+
+  app.addHook('onResponse', async (request, reply) => {
+    const method = request.method;
+    const route = metricRoute(request);
+    const status = String(reply.statusCode);
+
+    const requestLabels = { method, route, status };
+    const requestKey = labelsKey(requestLabels);
+    const requestMetric = requestTotalSeries.get(requestKey);
+    if (requestMetric) {
+      requestMetric.value += 1;
+    } else {
+      requestTotalSeries.set(requestKey, {
+        labels: requestLabels,
+        value: 1
+      });
+    }
+
+    const durationLabels = { method, route };
+    const durationKey = labelsKey(durationLabels);
+    const durationMetric = requestDurationSeries.get(durationKey);
+    if (durationMetric) {
+      durationMetric.count += 1;
+      durationMetric.sumMs += reply.elapsedTime;
+    } else {
+      requestDurationSeries.set(durationKey, {
+        labels: durationLabels,
+        count: 1,
+        sumMs: reply.elapsedTime
+      });
+    }
+  });
 
   app.addHook('onReady', async () => {
     await store.init();
@@ -138,6 +189,43 @@ export function buildServer(options: BuildServerOptions = {}) {
         data: { status: 'not_ready' }
       });
     }
+  });
+
+  app.get('/metrics', async (_request, reply) => {
+    const lines = [
+      '# HELP tri_uptime_seconds Process uptime in seconds.',
+      '# TYPE tri_uptime_seconds gauge',
+      `tri_uptime_seconds ${Math.floor(process.uptime())}`,
+      '# HELP tri_process_start_time_seconds Process start time since unix epoch in seconds.',
+      '# TYPE tri_process_start_time_seconds gauge',
+      `tri_process_start_time_seconds ${startedAtSec}`,
+      '# HELP tri_http_requests_total Total HTTP requests by method, route and status code.',
+      '# TYPE tri_http_requests_total counter'
+    ];
+
+    for (const series of requestTotalSeries.values()) {
+      lines.push(`tri_http_requests_total${labelsToText(series.labels)} ${series.value}`);
+    }
+
+    lines.push(
+      '# HELP tri_http_request_duration_ms_sum Cumulative HTTP request duration in milliseconds by method and route.',
+      '# TYPE tri_http_request_duration_ms_sum counter'
+    );
+    for (const series of requestDurationSeries.values()) {
+      lines.push(`tri_http_request_duration_ms_sum${labelsToText(series.labels)} ${series.sumMs}`);
+    }
+
+    lines.push(
+      '# HELP tri_http_request_duration_ms_count Total sampled HTTP requests for duration calculation by method and route.',
+      '# TYPE tri_http_request_duration_ms_count counter'
+    );
+    for (const series of requestDurationSeries.values()) {
+      lines.push(
+        `tri_http_request_duration_ms_count${labelsToText(series.labels)} ${series.count}`
+      );
+    }
+
+    return reply.type('text/plain; version=0.0.4; charset=utf-8').send(`${lines.join('\n')}\n`);
   });
 
   app.post('/v1/auth/sms/send', async (request) => {
