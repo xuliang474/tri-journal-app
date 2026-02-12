@@ -29,6 +29,7 @@ export interface AuthAttemptFilter {
 export interface DataStore {
   init(): Promise<void>;
   close(): Promise<void>;
+  healthcheck(): Promise<void>;
 
   getSmsCode(phone: string): Promise<SmsCodeRecord | undefined>;
   upsertSmsCode(record: SmsCodeRecord): Promise<void>;
@@ -100,6 +101,8 @@ export class InMemoryStore implements DataStore {
   async init(): Promise<void> {}
 
   async close(): Promise<void> {}
+
+  async healthcheck(): Promise<void> {}
 
   async getSmsCode(phone: string): Promise<SmsCodeRecord | undefined> {
     return this.smsCodes.get(phone);
@@ -403,6 +406,10 @@ export class PostgresStore implements DataStore {
 
   async close(): Promise<void> {
     await this.pool.end();
+  }
+
+  async healthcheck(): Promise<void> {
+    await this.pool.query('SELECT 1');
   }
 
   async getSmsCode(phone: string): Promise<SmsCodeRecord | undefined> {

@@ -201,6 +201,11 @@ npm run format:check
 
 ## API 列表（已实现）
 
+### 运维探活
+
+- `GET /healthz`
+- `GET /readyz`
+
 ### 认证
 
 - `POST /v1/auth/sms/send`
@@ -237,6 +242,20 @@ npm run format:check
 - `40331`：需图形验证码
 - `42311`：密码登录临时锁定
 - `42221`：AI 标注区间非法
+
+## 生产探活建议
+
+可将以下探活配置接入部署平台（K8s/Nginx/云主机进程守护）：
+
+1. Liveness：`GET /healthz`（用于进程存活检查）
+2. Readiness：`GET /readyz`（用于依赖就绪检查，当前会检查存储可用性）
+
+示例命令：
+
+```bash
+curl -sS http://127.0.0.1:3000/healthz
+curl -sS http://127.0.0.1:3000/readyz
+```
 
 ## 验收 PostgreSQL 持久化
 

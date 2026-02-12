@@ -112,6 +112,34 @@ export function buildServer(options: BuildServerOptions = {}) {
     });
   });
 
+  app.get('/healthz', async () => {
+    return {
+      code: 0,
+      message: 'ok',
+      data: {
+        status: 'ok',
+        uptime_sec: Math.floor(process.uptime())
+      }
+    };
+  });
+
+  app.get('/readyz', async (_request, reply) => {
+    try {
+      await store.healthcheck();
+      return {
+        code: 0,
+        message: 'ok',
+        data: { status: 'ready' }
+      };
+    } catch {
+      return reply.status(503).send({
+        code: 50300,
+        message: '依赖未就绪',
+        data: { status: 'not_ready' }
+      });
+    }
+  });
+
   app.post('/v1/auth/sms/send', async (request) => {
     const body = z
       .object({
