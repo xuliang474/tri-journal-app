@@ -1,6 +1,6 @@
 SHELL := /bin/zsh
 
-.PHONY: install db-up db-down db-logs db-reset dev test build smoke smoke-memory smoke-postgres smoke-postgres-clean ci-local release-preflight release-verify release-verify-soft release-dry-run release-dry-run-first release-patch release-minor release-major release-first release-bootstrap release-bootstrap-dry
+.PHONY: install db-up db-down db-logs db-reset dev test build smoke smoke-memory smoke-postgres smoke-postgres-clean ci-local preflight-env release-preflight release-verify release-verify-soft release-dry-run release-dry-run-first release-patch release-minor release-major release-first release-bootstrap release-bootstrap-dry
 
 install:
 	npm install
@@ -41,6 +41,9 @@ smoke-postgres-clean:
 
 ci-local:
 	./scripts/ci_local.sh
+
+preflight-env:
+	./scripts/preflight_env.sh
 
 release-preflight:
 	./scripts/release_preflight.sh

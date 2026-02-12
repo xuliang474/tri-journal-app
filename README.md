@@ -23,6 +23,8 @@
 ```bash
 make install
 cp .env.example .env
+# 生产部署可改用:
+# cp .env.production.example .env
 ```
 
 2. 启动 PostgreSQL
@@ -67,6 +69,7 @@ make smoke-memory # 自动起服务（memory）并执行全链路冒烟
 make smoke-postgres # 自动起 PostgreSQL + 起服务 + 全链路冒烟
 make smoke-postgres-clean # 跑完 postgres 冒烟后自动清理容器和数据
 make ci-local   # 本地发布前一键验收（test+build+smoke）
+make preflight-env # 环境变量启动前检查
 make release-preflight                        # 发布前体检（分支/工作区/远端）
 make release-verify                           # 发布后校验（版本/changelog/tag）
 make release-verify-soft                      # 首发前宽松校验（无 CHANGELOG 可放行）
@@ -146,6 +149,29 @@ cp .env.example .env
 # 确保本地有 PostgreSQL，且 DATABASE_URL 正确
 npm run dev
 ```
+
+## 生产环境模板与启动前自检
+
+1. 复制生产模板并填写真实值
+
+```bash
+cp .env.production.example .env
+```
+
+2. 运行自检脚本
+
+```bash
+make preflight-env
+# 或指定文件:
+# ENV_FILE=.env.production.example make preflight-env
+```
+
+自检项包括：
+
+- `NODE_ENV` 必须为 `production`（可通过 `ALLOW_NON_PROD=1` 跳过）
+- `STORAGE_DRIVER` 必须是 `postgres|memory`
+- `STORAGE_DRIVER=postgres` 时 `DATABASE_URL` 必填且格式正确
+- `PORT` 必须是 1-65535 的数字
 
 ## 编译与测试
 
