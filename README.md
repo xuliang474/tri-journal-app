@@ -166,6 +166,15 @@ make preflight-env
 # ENV_FILE=.env.production.example make preflight-env
 ```
 
+3. 建议开启运行时自检（启动即检查）
+
+```bash
+# 在 .env 中设置
+ENABLE_RUNTIME_PREFLIGHT=1
+```
+
+当 `NODE_ENV=production` 时，服务默认也会执行 runtime preflight；不通过将拒绝启动并输出具体错误项。
+
 自检项包括：
 
 - `NODE_ENV` 必须为 `production`（可通过 `ALLOW_NON_PROD=1` 跳过）
